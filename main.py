@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.responses import StreamingResponse
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
@@ -6,21 +6,31 @@ from io import BytesIO
 
 app = FastAPI()
 
-@app.get("/")
-def export_excel():
+@app.post("/export")
+async def export_excel(request: Request):
+    data = await request.json()
+    # Meta - Comp, Manag ...
+    meta = {}
+    table_data = []
+    for item in data:
+        if len(item) <= 2 and not all(k in item for k in ["Category", "Brand", "Model", "Name", "Available QTY", "DDP (RUB)"]):
+            meta.update(item)
+        else:
+            table_data.append(item)
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Shavers"
 
     # Верхняя часть
     ws["A1"] = "Company:"
-    ws["B1"] = "Ursus Trade"
+    ws["B1"] = meta["Company Name"]
     ws["A2"] = "Manager:"
-    ws["B2"] = "Ivan Petrov"
+    ws["B2"] = meta["Full Name"]
     ws["A3"] = "E-mail:"
-    ws["B3"] = "ivan@petrov.com"
+    ws["B3"] = meta["Mail"]
     ws["A4"] = "Date:"
-    ws["B4"] = "31/03/2025"
+    ws["B4"] = meta["Created"]
 
     for row in range(1, 5):
         ws[f"A{row}"].alignment = Alignment(horizontal="right")
@@ -33,12 +43,17 @@ def export_excel():
     ws.append(headers)
 
     # Данные
-    data = [
-        ["Shaver", "Braun", "300s", "Shaver Braun 300s black", 1337, "2 581,00"],
-        ["Shaver", "Braun", "9560cc", "Shaver Braun 9560cc black", 42, "33 929,00"],
-        ["Shaver", "Braun", "8413s", "Shaver Braun 8413s black", 234, "21 699,00"],
-        ["Shaver", "Philips", "S5466/17", "Shaver Philips S5466/17 black/blue", 487, "7 618,00"],
-    ]
+    data = []
+
+    for row in table_data:
+        data.append([
+            row.get("Category", ""),
+            row.get("Brand", ""),
+            row.get("Model", ""),
+            row.get("Name", ""),
+            row.get("Available QTY", ""),
+            row.get("DDP (RUB)", "")
+        ])
 
     count = 7
     for row in data:
