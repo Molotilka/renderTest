@@ -6,7 +6,7 @@ from io import BytesIO
 
 app = FastAPI()
 
-@app.post("/export")
+@app.post("/")
 async def export_excel(request: Request):
     data = await request.json()
     # Meta - Comp, Manag ...
